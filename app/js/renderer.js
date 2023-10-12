@@ -61,8 +61,8 @@ form.addEventListener('submit', (e) => {
     if (getcmd.value !== '') {
         k8sCmdValue = getcmd.value;
     }
-    if (prefix.value !== '') {
-        prefixValue = prefix.value;
+    if (snapprefix.value !== '') {
+        prefixValue = snapprefix.value;
     }
 
     ipcRenderer.send('snapshot:create', {

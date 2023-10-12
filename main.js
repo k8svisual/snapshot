@@ -19,7 +19,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 const path = require('path');
 const os = require('os');
-const fs = require('fs');
+const fs = require('fs-extra');
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const slash = require('slash');
 const log = require('electron-log');
@@ -208,7 +208,7 @@ const menu = [
         label: app.name,
         submenu: [
           {
-            label: 'About VpK Snapshot',
+            label: 'About VpKSnapshot',
             click: createAboutWindow,
           },
           {
@@ -226,7 +226,7 @@ const menu = [
             type: 'separator'
           },
           {
-            label: 'Quit VpK Snapshot',
+            label: 'Quit VpKSnapshot',
             accelerator: 'CmdOrCtrl+Q',
             click: () => app.quit(),
           },
@@ -310,9 +310,14 @@ ipcMain.on('snapshot:create', (e, options) => {
     check = null;
   }
 
+  // Create the snapshot data
   getSnapShot(options.k8sCmd)
 
+  // Save the kind explains data
   writeExplains();
+
+  // Get the cluster version
+  getVersion(options.k8sCmd);
 
   logit('end - get snapshot');
   logit('================================================');
@@ -436,11 +441,11 @@ function getSnapShot(k8sCmd) {
 function saveData(data) {
   try {
     if (typeof data === 'undefined') {
-      logit('k8s returned get data not JSON structure');
+      logit('k8s returned get data not a JSON structure');
       return;
     }
     if (data.length === 0) {
-      logit('k8s returned get data not JSON structure');
+      logit('k8s returned no data for this resource kind');
       return;
     }
     if (data.startsWith('{')) {
@@ -508,15 +513,18 @@ function getK8sInfo(k8sCmd, kind, ns, cnt) {
     cmd = k8sCmd + ' explain ' + kind;
     logit(cmd);
 
+    explainOut = getExplains(cmd, kind)
     // get resource explain
-    explainOut = execSync(cmd).toString();
+    //explainOut = execSync(cmd).toString();
 
-    // split and save needed information
-    explainOut = explainOut.split('FIELDS:')
-    explainOut = explainOut[0];
+    if (explainOut !== 'none') {
+      // split and save needed information
+      explainOut = explainOut.split('FIELDS:')
+      explainOut = explainOut[0];
 
-    //save the explains to be written to explains.json
-    explains[kind] = explainOut;
+      //save the explains to be written to explains.json
+      explains[kind] = explainOut;
+    }
 
     logit(progress + '%' + ' complete');
 
@@ -547,6 +555,46 @@ function getK8sInfo(k8sCmd, kind, ns, cnt) {
   }
   return execOut;
 };
+
+function getExplains(cmd, kind) {
+  let explainOut = 'none'
+  try {
+    const execSync = require('child_process').execSync;
+    explainOut = execSync(cmd).toString();
+  } catch (e) {
+    explainOut = 'none'
+    logit('Did not locate explain for kind: ' + kind);
+  }
+  return explainOut;
+}
+
+function getVersion(cmd) {
+  logit('Get k8s version information');
+  const execSync = require('child_process').execSync;
+
+  try {
+    cmd = cmd + ' version -o json'
+    let out = execSync(cmd).toString();
+    if (out.length > 0) {
+      writeVersion(out)
+    }
+  } catch (err) {
+    logit('Error getting k8s version informatio, message: ' + err);
+  }
+}
+
+function writeVersion(version) {
+  let outputFilePath;
+  try {
+    outputFilePath = path.join(dynDir, 'version.json');
+    fs.writeFileSync(outputFilePath, version, 'utf-8');
+    logit('Kubernetes version data saved to ' + outputFilePath);
+  } catch (e) {
+    logit(`Error saving k8s version file: ${outputFilePath} message: ${e}`);
+  }
+}
+
+
 
 // Parse the data and build object with resources that support verb 'get'
 function parseAPIs(data) {
@@ -638,23 +686,18 @@ function parseAPIs(data) {
 };
 
 
-// Save extracted JSON data to a seperate file for each resource.  
-//
-// Saved file names are:    config####.yaml
-// #### starts at 10000 and increments by one for each resource.
-//
-// Note: 
-// The file contents are JSON but the file is named with .yaml
+// Save extracted k8s resource data to the snapshot file.  
 //
 function writeData(dir, prefix) {
 
   dynDir = utl.bldDirname(baseDir, prefix);
   let cnt = 0;
+  let k8sResc = {};
 
   try {
     let mkresult = utl.makedir(dynDir);
     if (mkresult === 'PASS') {
-      let fnum = 10000;
+      let fnum = 1000;
       let fn;
       let oldKind = '@startUp';
       let input;
@@ -673,13 +716,20 @@ function writeData(dir, prefix) {
             oldKind = input.kind;
           }
         }
-        input = JSON.stringify(input, null, 4);
+        //input = JSON.stringify(input, null, 4);
         fnum++;
-        fn = dynDir + '/' + 'config' + fnum + '.yaml';
-        fs.writeFileSync(fn, input);
+        k8sResc[fnum] = input;
+        // fn = dynDir + '/' + 'config' + fnum + '.yaml';
+        // fs.writeFileSync(fn, input);
         cnt++
       }
-      logit('Created ' + cnt + ' resource files');
+
+
+      const snapshotFilePath = path.join(dynDir, 'vpk.snapshot.json');
+      const jsonString = JSON.stringify(k8sResc, null, 0);
+
+      fs.writeFileSync(snapshotFilePath, jsonString, 'utf-8');
+      logit('Kubernetes Snapshot file saved to ' + snapshotFilePath);
     } else {
       mainWindow.webContents.send('status', {
         'msg': 'Unable to create directory: ' + dynDir,
@@ -699,8 +749,9 @@ function writeData(dir, prefix) {
   return cnt;
 }
 
+
 function writeExplains() {
-  logit('Saving file explains.json');
+  //logit('Saving file explains.json');
   utl.writeExplains(dynDir, explains);
   explains = {};
 }

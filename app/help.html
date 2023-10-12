@@ -41,22 +41,21 @@
 
         <div class="help">
 
-            <p>VpK (Visual parsed Kubernetes) Snapshot retrieves information from a kubernetes (k8s) instance and
-                creates a snapshot
-                directory with a separate file for each unique k8s resource. The k8s resource type must support the
-                <b>get</b>
-                verb to be included in the snapshot.
+            <p>VpK (Visually presented Kubernetes) Snapshot retrieves information from a Kubernetes (k8s) instance and
+                creates a directory with the snapshot, explains, and version files. The k8s resource type must support
+                the
+                <b>get</b> verb to be included in the snapshot and explains files.
             </p>
 
-            <p>View screen image below the following field numbers for additional assistance.</p>
+            <p>View the screen image below to associate the following field numbers for additional assistance.</p>
             <ul>
                 <li><span class="helpitem">(1)</span>Enter the command this is used to communicate with kubernetes to
-                    retrieve the resource information. The default
-                    is kubectl. Other command examples: <b>oc, microk8 kubectl</b> <br><br>
+                    retrieve the resource information. The default command CLI is 'kubectl'. Other command examples:
+                    <b>oc, microk8 kubectl, etc.</b> <br><br>
                 </li>
 
                 <li><span class="helpitem">(2)</span>Number of seconds to wait for command to execute before the command
-                    is terminated.<br><br>
+                    times out and is terminated.<br><br>
                 </li>
 
                 <li><span class="helpitem">(3)</span>A default value of 'snapshot' will be appended to the front of the
@@ -78,13 +77,13 @@
                 </li>
 
                 <li><span class="helpitem">(6)</span>Press the 'GET SNAPSHOT' button to begin the snapshot
-                    capature.<br><br>
+                    capture.<br><br>
                 </li>
             </ul>
 
             <p>During the capture process messages will scroll in the status area. Once completed a message in a green
                 bar will be shown at the bottom of the screen indicating the resource files have been created. The
-                status area will also have a similar message along with the snapshot directory that caontains the files.
+                status area will also have a similar message along with the snapshot directory that contains the files.
             </p>
         </div>
 
